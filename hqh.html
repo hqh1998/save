@@ -1,0 +1,181 @@
+<!DOCTYPE html>
+<html>  
+<head>  
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+    <meta name="viewport" content="initial-scale=1, maximum-scale=1,user-scalable=no"/>
+    <title>Simple Map</title>
+    <link rel="stylesheet" href="https://js.arcgis.com/3.23/dijit/themes/claro/claro.css"> 
+    <link rel="stylesheet" href="https://js.arcgis.com/3.23/esri/css/esri.css">
+    <style>
+      html, body {
+        height: 100%;
+        margin: 0;
+        padding: 0;
+      }
+         #map{padding:0;}
+        
+        
+         #map2
+        {
+            position: absolute;
+            width: 50%;
+            left: 50%;
+            top: 42px;
+            height: 90%;
+        }
+        
+    </style> 
+<select id="style" style="width:100px;">   
+  <option value="">请选择风格：</option>
+  <option   value="osm">osm</option>   
+  <option   value="gray">gray</option>
+  <option   value="topo">topo</option>
+  <option value="oceans">oceans</option>
+ </select>
+    <input type='button' value='切换底图' onclick="choose_basemap()"/>
+   
+    <script src="https://js.arcgis.com/3.23/"></script>
+    <script type="text/javascript">  
+      var layer, map, map2,visible = [];     // 创建图层，地图和显示数组      
+          function init() { 
+          require(["esri/map", "esri/layers/ArcGISTiledMapServiceLayer","esri/layers/KMLLayer","esri/layers/ArcGISDynamicMapServiceLayer","esri/geometry/webMercatorUtils","esri/dijit/Scalebar",
+        "dojo/parser", "dojo/on", "dojo/domReady!"], function(Map,ArcGISTiledMapServiceLayer,KMLLayer, ArcGISDynamicMapServiceLayer,webMercatorUtils,Scalebar, parser,on) {
+               parser.parse();
+        map = new Map("map", {
+          basemap: "topo",  
+          center: [-122.45, 37.75], 
+          zoom: 3
+        });
+              
+              
+      
+              
+              
+    map.on("mouse-move", function(e){
+       var mp = e.mapPoint;
+       var n = webMercatorUtils.xyToLngLat(mp.x, mp.y);
+        dojo.byId("div").innerHTML = n;
+    });
+              
+              var flagV=true,flagI=true;      
+        map.on("extent-change",function(event){
+          if(flagV)
+              {
+                  map2.setExtent(event.extent);
+                   flagI=false; 
+              }
+           
+            else if(!flagV){  
+                    flagV=true;    
+                }  
+        });
+              
+       
+        map2 = new Map("map2", {
+          basemap: "dark-gray",  
+          center: [-122.45, 37.75],
+          zoom: 3
+        });
+              
+        map2.on("extent-change",function(event1){
+          if(flagI)
+              {
+                  map.setExtent(event1.extent);
+                  flagV=false;  
+              }
+             else if(!flagI){  
+                    flagI=true;  
+                }  
+            
+        });
+              
+              
+            
+              
+              
+                layer = new ArcGISDynamicMapServiceLayer(
+                "https://sampleserver6.arcgisonline.com/arcgis/rest/services/USA/MapServer");
+      
+        if (layer.loaded) {  
+            buildLayerList(layer);  
+        }  
+        else {  
+            dojo.connect(layer, "onLoad", buildLayerList);  
+        } 
+              
+              
+         var scalebar = new Scalebar({
+          map: map,
+        attachTo: "bottom-left",
+        scalebarStyle: "ruler",
+        scalebarUnit: "metric"
+        });         
+      });
+          }
+        
+   
+  
+      /**  
+       * 构建图层函数  
+       */  
+       function buildLayerList(layer) {  
+        var items = dojo.map(   // 适用于回调到给定数组中的每个元素，并返回一个数组的结果。  
+            layer.layerInfos,   // 在服务返回可见的图层的数组，默认是可见的  
+            function(info,index){  
+                if (info.defaultVisibility) {  
+                    visible.push(info.id);  // 将id编号放入数组中  
+                }  
+                return "<input type='checkbox' class='list_item'" + (info.defaultVisibility ? "checked=checked" : "") + "' id='" + info.id + "' onclick='updateLayerVisibility();' /><label for='" + info.id + "'>" + info.name + "</label>";  
+            }  
+        );  
+        dojo.byId("layer_list").innerHTML = items.join(' ');  
+        //alert(items);  
+        layer.setVisibleLayers(visible,true);   // setVisibleLayers(ids, doNotRefresh?)  默认为false（及时刷新）  
+        map.addLayer(layer);    // 将图层加入到地图中  
+      }  
+  
+    /**  
+     * 更新图层显示  
+     */  
+      function updateLayerVisibility() {  
+        var inputs = dojo.query(".list_item"), input;   // 使用dojo.query()方法查询  
+      
+        visible = [];  
+  
+        // 遍历每一个文本框  
+        dojo.forEach(inputs,function(input){  
+          if (input.checked) {  
+              visible.push(input.id);   // 填充数组值  
+          }  
+          });  
+        // 如果它们中有任何一个不显示的图层将 设置数组为 -1  
+        if(visible.length === 0){  
+          visible.push(-1);  
+        }  
+        layer.setVisibleLayers(visible);      
+      } 
+        
+        
+        
+        function choose_basemap() {
+             var obj= document.getElementById("style").value;
+             map.setBasemap(obj);
+         }
+        
+        
+  
+      dojo.addOnLoad(init);     // 初始化加载  
+    </script>  
+</head>  
+  
+<body>
+ <input type="button" onclick="location.href='index.html'" value="卷帘" />
+图层列表 : <span id="layer_list"></span><br />  
+<br />  
+    <div id="map" style="position: relative; width: 50%; height: 90%;"></div>
+    <div id="map2"></div>
+    <div id="scalebar" style="position:absolute;left:100px;top:530px;"></div>
+    <div id="div" style="position:absolute;bottom:0;margin-left:-100px;left:20%;"></div>
+    
+</body>  
+</html>  
